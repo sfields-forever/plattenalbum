@@ -27,6 +27,9 @@ import urllib.parse
 import urllib.error
 import socket
 import threading
+import sqlite3
+import queue
+import itertools
 import collections
 import sys
 import signal
@@ -445,6 +448,7 @@ class Artist(GObject.Object):
 		return TagFilter(albumartist=self.name, albumartistsort=self.sortname)
 
 class CommandError(Exception): pass
+class ConnectionLostError(CommandError): pass
 class Client(GObject.Object):
 	__gsignals__={
 		"updating-db": (GObject.SignalFlags.RUN_FIRST, None, ()),
@@ -453,6 +457,7 @@ class Client(GObject.Object):
 		"connected": (GObject.SignalFlags.RUN_FIRST, None, (bool,)),
 		"server-error": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
 		"songid": (GObject.SignalFlags.RUN_FIRST, None, (Song,Gdk.Paintable,str,str,str,str,)),
+		"cover": (GObject.SignalFlags.RUN_FIRST, None, (Gdk.Paintable,)),
 		"metadata": (GObject.SignalFlags.RUN_FIRST, None, (Song,)),
 		"state": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
 		"elapsed": (GObject.SignalFlags.RUN_FIRST, None, (float,float,)),
@@ -473,6 +478,8 @@ class Client(GObject.Object):
 		super().__init__()
 		self._settings=settings
 		self._cached_status={}
+		self._cover_worker=None
+		self._last_cover=(None, None)  # (key, cover) of the last cover loaded for the current song
 
 	def _post_connect(self):
 		self._socket.settimeout(None)
@@ -522,7 +529,7 @@ class Client(GObject.Object):
 	def _parse_line(self):
 		line=self._read_file.readline().decode('utf-8')
 		if not line.endswith("\n"):
-			raise CommandError
+			raise ConnectionLostError
 		line=line[:-1]
 		if line.startswith("ACK"):
 			if "you don't have permission" in line:
@@ -636,12 +643,17 @@ class Client(GObject.Object):
 				return False
 			self._set_default_tagtypes()
 			self._settings.set_boolean("manual-connection", manual)
+			if self._music_directory is None:  # remote server: load and cache the covers in the background
+				self._cover_worker=CoverWorker(self._settings, self.server, password)
 			self.emit("connected", self._database_is_empty())
 			GLib.timeout_add(100, self._main_loop)
 			return False
 		GLib.idle_add(callback)
 
 	def close_connection(self):
+		if self._cover_worker is not None:
+			self._cover_worker.stop()
+			self._cover_worker=None
 		self._socket.close()
 		self._read_file.close()
 		try:
@@ -762,6 +774,17 @@ class Client(GObject.Object):
 		self._set_default_tagtypes()
 		return self._get_cover(song)
 
+	def get_cover_async(self, album, callback, is_valid, priority=2, on_fail=None):
+		"""Calls callback(cover) with the cover of the album. Without a cover worker (local server)
+		this happens immediately and blocking, exactly like with get_cover(). With a cover worker
+		the cover is loaded in the background and callback is called later by the main loop, but
+		only if is_valid() is still true by then. Requests with a lower priority number are served
+		first (1: album page, 2: albums view). on_fail() is called instead if no cover could be loaded."""
+		if self._cover_worker is None:
+			callback(self.get_cover(album))
+		else:
+			self._cover_worker.request(album, callback, is_valid, priority, on_fail)
+
 	def get_duration(self, album):
 		self._send_command(f"count {album.tag_filter()}")
 		return Duration(self._parse_dict()["playtime"])
@@ -835,7 +858,7 @@ class Client(GObject.Object):
 				if self._COVER_REGEX.match(f):
 					return GLib.build_filenamev([song_dir, f])
 
-	def _cover_fetch_loop(self, command, quoted_file):
+	def _cover_fetch_bytes(self, command, quoted_file):
 		offset=0
 		chunk_size=-1
 		data=bytearray()
@@ -851,12 +874,19 @@ class Client(GObject.Object):
 			data.extend(chunk)
 			offset+=chunk_size
 			self._clear_response()
+		return bytes(data)
+
+	@staticmethod
+	def _decode_cover(data):
 		if not data:
 			return FALLBACK_COVER
 		try:
 			return Gdk.Texture.new_from_bytes(GLib.Bytes.new(data))
 		except GLib.Error:  # cover can't be loaded
 			return FALLBACK_COVER
+
+	def _cover_fetch_loop(self, command, quoted_file):
+		return self._decode_cover(self._cover_fetch_bytes(command, quoted_file))
 
 	def _get_binary_cover(self, quoted_file):
 		try:
@@ -877,6 +907,27 @@ class Client(GObject.Object):
 
 	def _get_cover(self, song):
 		return self._get_cover_with_path(song)[0]
+
+	def _request_cover(self, song, songid):
+		"""Remote server: loads the cover of the song's album (of the song itself if the album has none) in the background."""
+		valid=lambda: self.get_songid() == songid
+		def show(cover):
+			if valid():
+				self.emit("cover", cover)
+		fail=lambda: show(FALLBACK_COVER)  # nothing could be loaded: no cover rather than the one of the previous song
+		def on_album_cover(cover):
+			if cover is FALLBACK_COVER:  # no album cover: use the one of the song itself
+				album.tag_filter=lambda: TagFilter(file=song["file"])
+				self.get_cover_async(album, show, valid, 1, fail)
+			else:
+				self._last_cover=(key, cover)
+				show(cover)
+		album=song.get_album()
+		key=(self.server, str(album.tag_filter()))
+		if self._last_cover[0] == key:  # same album as the previous song
+			show(self._last_cover[1])
+		else:
+			self.get_cover_async(album, on_album_cover, valid, 1, fail)
 
 	def _set_default_tagtypes(self):
 		self._run_command("tagtypes reset track title artist album albumartist albumartistsort date")
@@ -901,8 +952,11 @@ class Client(GObject.Object):
 			if (songid:=diff.get("songid")) is not None:
 				if song is None:
 					song=self.currentsong()
-				cover,cover_path=self._get_cover_with_path(song)
+				remote=self._cover_worker is not None  # remote server: the cover follows in the background (signal "cover")
+				cover,cover_path=(None, None) if remote else self._get_cover_with_path(song)
 				self.emit("songid", song, cover, cover_path, self._cached_status["song"], songid, self._cached_status["state"])
+				if remote:
+					self._request_cover(song, songid)
 			elif song is not None:
 				self.emit("metadata", song)
 			if (elapsed:=diff.get("elapsed")) is not None:
@@ -970,6 +1024,162 @@ class Client(GObject.Object):
 	def consume(self, state): self._run_command(f"consume {state}")
 	def random(self, state): self._run_command(f"random {state}")
 	def repeat(self, state): self._run_command(f"repeat {state}")
+
+class CoverCache:
+	"""Persistent cache for the raw cover bytes of a remote MPD server, i.e. for exactly what
+	would otherwise have to be fetched from MPD again and again. Albums without a cover are
+	stored with data=NULL so that MPD isn't asked for them a second time. There is no
+	invalidation yet. An instance must only be used by the thread that created it."""
+	def __init__(self):
+		cache_dir=GLib.build_filenamev([GLib.get_user_cache_dir(), "plattenalbum"])
+		GLib.mkdir_with_parents(cache_dir, 0o755)
+		self._con=sqlite3.connect(GLib.build_filenamev([cache_dir, "covers.sqlite"]))
+		self._con.execute("CREATE TABLE IF NOT EXISTS covers (server TEXT NOT NULL, album TEXT NOT NULL, data BLOB,"
+			" added INTEGER NOT NULL DEFAULT (strftime('%s','now')), PRIMARY KEY (server, album))")
+		self._con.commit()
+
+	def get(self, server, album):
+		"""None if unknown, otherwise a tuple (data,) where data is None for an album without a cover"""
+		try:
+			return self._con.execute("SELECT data FROM covers WHERE server=? AND album=?", (server, album)).fetchone()
+		except sqlite3.Error:
+			return None
+
+	def put(self, server, album, data):
+		try:
+			self._con.execute("INSERT OR REPLACE INTO covers (server, album, data) VALUES (?,?,?)", (server, album, data or None))
+			self._con.commit()
+		except sqlite3.Error:
+			pass  # the cover is displayed anyway
+
+class CoverWorker:
+	"""Loads the covers of a remote MPD server in the background, so that the GUI is never blocked.
+	It has its own thread and its own MPD connection (which is only opened when a cover is
+	missing in the cache) and does all the cache access."""
+	def __init__(self, settings, server, password):
+		self._settings=settings
+		self._server=server
+		self._password=password
+		self._queue=queue.PriorityQueue()  # entries: (priority, sequence number, job)
+		self._seq=itertools.count()  # keeps requests of equal priority in order
+		self._stopped=threading.Event()
+		self._client=None
+		self._permission_error=False
+		threading.Thread(target=self._run, daemon=True).start()
+
+	def request(self, album, callback, is_valid, priority, on_fail=None):
+		"""callback(cover) is called by the main loop, but only if is_valid() is still true by then (on_fail()
+		instead if no cover could be loaded). is_valid is also called from the worker thread, so it has to be
+		cheap and free of side effects. Requests with a lower priority number are served first, equal ones in
+		the order of the requests."""
+		self._queue.put((priority, next(self._seq), (album, callback, is_valid, on_fail)))
+
+	def stop(self):
+		self._stopped.set()
+		self._queue.put((0, next(self._seq), None))  # wake up the thread, skipping all pending requests
+		if (client:=self._client) is not None:  # unblock a pending read
+			try:
+				client._socket.shutdown(socket.SHUT_RDWR)
+			except OSError:
+				pass
+
+	def _on_server_error(self, client, message):
+		self._permission_error=True
+
+	def _drop(self, client):
+		if client is self._client:
+			self._client=None
+		try:
+			client.close_connection()
+		except Exception:
+			pass
+
+	def _connect(self):
+		client=Client(self._settings)
+		client.connect("server-error", self._on_server_error)
+		try:
+			if self._server[0] in "@/":
+				success=client._connect(self._server, 0)
+			else:
+				host,port=self._server.rsplit(":", 1)
+				success=client._connect(host, int(port))
+			if not success:
+				return False
+			if self._password:
+				client._run_command(f"password {self._password}")
+			client._clear_tagtypes()  # only the file is needed, so this has to be done just once
+			client._socket.settimeout(CONNECTION_TIMEOUT)
+		except (OSError, CommandError, ValueError):
+			self._drop(client)
+			return False
+		self._client=client
+		return True
+
+	def _fetch(self, album):
+		"""Returns the raw cover bytes, b"" if MPD definitely has no cover for the album and None
+		if nothing should be cached."""
+		client=self._client
+		self._permission_error=False
+		client._send_command(f"find {album.tag_filter()} window 0:1")
+		song=client._parse_song()
+		if not song:
+			return None
+		quoted_file=song.get_quoted_file()
+		try:
+			data=client._cover_fetch_bytes("albumart", quoted_file)
+		except ConnectionLostError:
+			raise
+		except CommandError:
+			try:
+				data=client._cover_fetch_bytes("readpicture", quoted_file)
+			except ConnectionLostError:
+				raise
+			except CommandError:
+				data=b""
+		if self._permission_error:
+			return None
+		return data
+
+	def _fetch_with_retry(self, album):
+		for attempt in range(2):  # the second attempt uses a new connection (e.g. after MPD's connection_timeout)
+			if self._stopped.is_set():
+				return None
+			if self._client is None and not self._connect():
+				return None
+			try:
+				return self._fetch(album)
+			except (ConnectionLostError, OSError, ValueError):
+				self._drop(self._client)
+			except CommandError:  # MPD answered with an error, the connection is fine
+				return None
+		return None
+
+	def _deliver(self, callback, is_valid, data):
+		if is_valid():  # don't decode covers nobody wants anymore
+			GLib.idle_add(callback, Client._decode_cover(data))
+
+	def _process(self, cache, album, callback, is_valid, on_fail):
+		if not is_valid():  # outdated (e.g. scrolled away), don't touch cache or network
+			return
+		key=str(album.tag_filter())
+		if cache is not None and (row:=cache.get(self._server, key)) is not None:
+			self._deliver(callback, is_valid, row[0])
+		elif (data:=self._fetch_with_retry(album)) is not None:
+			if cache is not None:
+				cache.put(self._server, key, data)
+			self._deliver(callback, is_valid, data)
+		elif on_fail is not None and is_valid():  # nothing could be loaded, e.g. no connection
+			GLib.idle_add(on_fail)
+
+	def _run(self):
+		try:
+			cache=CoverCache()
+		except (sqlite3.Error, OSError):
+			cache=None  # work without a cache
+		while (job:=self._queue.get()[2]) is not None and not self._stopped.is_set():
+			self._process(cache, *job)
+		if self._client is not None:
+			self._drop(self._client)
 
 ########################
 # gio settings wrapper #
@@ -1571,8 +1781,14 @@ class AlbumRow(Gtk.Box):
 			self._cover.set_alternative_text(_("Album cover of an unknown album"))
 		self._date.set_text(album.date)
 		if album.cover is None:
-			album.cover=self._client.get_cover(album)
-		self._cover.set_paintable(album.cover)
+			self._cover.set_paintable(FALLBACK_COVER)  # placeholder until the cover has been loaded
+			def on_cover(cover):
+				album.cover=cover
+				if self.album is album:  # the row might have been rebound in the meantime
+					self._cover.set_paintable(cover)
+			self._client.get_cover_async(album, on_cover, lambda: self.album is album)
+		else:
+			self._cover.set_paintable(album.cover)
 
 class AlbumsView(Gtk.GridView):
 	def __init__(self, client):
@@ -1589,9 +1805,12 @@ class AlbumsView(Gtk.GridView):
 		def bind(factory, item):
 			row=item.get_child()
 			row.set_album(item.get_item())
+		def unbind(factory, item):
+			item.get_child().album=None  # outdates pending cover requests of this row
 		factory=Gtk.SignalListItemFactory()
 		factory.connect("setup", setup)
 		factory.connect("bind", bind)
+		factory.connect("unbind", unbind)
 		self.set_factory(factory)
 
 		# menu
@@ -1782,7 +2001,14 @@ class AlbumPage(Adw.NavigationPage):
 		suptitle.set_text(album.artist.name)
 		subtitle.set_text(album.date)
 		length.set_text(str(client.get_duration(album)))
-		cover.set_paintable(client.get_cover(album))
+		if album.cover is None:
+			cover.set_paintable(FALLBACK_COVER)  # placeholder until the cover has been loaded
+			def on_cover(texture):
+				album.cover=texture
+				cover.set_paintable(texture)
+			client.get_cover_async(album, on_cover, lambda: True, priority=1)
+		else:
+			cover.set_paintable(album.cover)
 		for song in client.get_songs(album):
 			row=SongActionRow(song, hide_artist=album.artist.name)
 			song_list.append(row)
@@ -2573,6 +2799,7 @@ class Player(Adw.Bin):
 		# widgets
 		self._cover=Gtk.Picture(css_classes=["cover"], accessible_role=Gtk.AccessibleRole.PRESENTATION,
 			halign=Gtk.Align.CENTER, margin_start=12, margin_end=12, margin_bottom=6, visible=False)
+		self._cover.set_paintable(FALLBACK_COVER) # remote server: first filling of player
 		self._lyrics_window=LyricsWindow()
 		playlist_window=PlaylistWindow(client)
 		self._playback_controls=PlaybackControls(client, settings)
@@ -2603,6 +2830,7 @@ class Player(Adw.Bin):
 		# connect
 		self._stack.connect("notify::visible-child-name", self._on_visible_child_name)
 		client.connect("songid", self._on_songid_changed)
+		client.connect("cover", lambda client, cover: self._cover.set_paintable(cover))
 		client.connect("playlist", self._on_playlist_changed)
 		client.connect("disconnected", self._on_disconnected)
 		client.connect("connected", self._on_connected)
@@ -2622,7 +2850,8 @@ class Player(Adw.Bin):
 
 	def _on_songid_changed(self, client, song, cover, cover_path, songpos, songid, state):
 		if song:
-			self._cover.set_paintable(cover)
+			if cover is not None:  # remote server: the cover follows with the "cover" signal
+				self._cover.set_paintable(cover)
 			self._cover.set_visible(True)
 			self._lyrics_window.set_property("song", song)
 			if self._stack.get_visible_child_name() == "lyrics":
@@ -2676,6 +2905,7 @@ class PlayerBar(Gtk.Overlay):
 
 		# widgets
 		self._cover=Gtk.Picture(css_classes=["cover"], accessible_role=Gtk.AccessibleRole.PRESENTATION, visible=False)
+		self._cover.set_paintable(FALLBACK_COVER) # remote server: first filling of player bar
 		progress_bar=ProgressBar(client)
 		progress_bar.update_property([Gtk.AccessibleProperty.LABEL], [_("Progress bar")])
 		self._title=Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
@@ -2683,6 +2913,7 @@ class PlayerBar(Gtk.Overlay):
 
 		# connect
 		client.connect("songid", self._on_songid_changed)
+		client.connect("cover", lambda client, cover: self._cover.set_paintable(cover))
 		client.connect("disconnected", self._on_disconnected)
 
 		# packing
@@ -2706,7 +2937,8 @@ class PlayerBar(Gtk.Overlay):
 
 	def _on_songid_changed(self, client, song, cover, cover_path, songpos, songid, state):
 		if song:
-			self._cover.set_paintable(cover)
+			if cover is not None:  # remote server: the cover follows with the "cover" signal
+				self._cover.set_paintable(cover)
 			self._cover.set_visible(True)
 			self._title.set_text(song["title"][0])
 			self._subtitle.set_text(str(song["artist"]))
