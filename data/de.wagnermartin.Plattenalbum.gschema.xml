@@ -42,5 +42,9 @@
 			<default>true</default>
 			<summary>Provide MPRIS</summary>
 		</key>
+		<key type="b" name="cover-cache">
+			<default>false</default>
+			<summary>Cache remote covers</summary>
+		</key>
 	</schema>
 </schemalist>
