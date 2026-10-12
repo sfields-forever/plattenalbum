@@ -46,5 +46,9 @@
 			<default>false</default>
 			<summary>Cache remote covers</summary>
 		</key>
+		<key type="u" name="cover-cache-scope">
+			<default>0</default>
+			<summary>Cache only viewed covers (0) or the entire collection (1)</summary>
+		</key>
 	</schema>
 </schemalist>

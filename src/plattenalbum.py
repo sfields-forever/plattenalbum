@@ -961,6 +961,19 @@ class Client(GObject.Object):
 			self._cover_worker=None
 		if self._remote_args is not None and self._settings.get_boolean("cover-cache"):
 			self._cover_worker=CoverWorker(self._settings, *self._remote_args)
+		worker=self._cover_worker
+		GLib.timeout_add_seconds(3, lambda: self._cover_worker is worker and self.sync_covers() and False)  # covers on first screen go first, only the newest worker still gets its sync, runs once
+
+	def sync_covers(self, revalidate=False):
+		"""Remote server and enabled cache: in the background (with the lowest priority) the covers of the whole collection are
+		cached if chosen in the preferences, and with revalidate the cached covers are checked for changes.
+		Returns whether a job has been started."""
+		if self._cover_worker is not None:
+			self._cover_worker.fill=self._settings.get_uint("cover-cache-scope") == 1
+			if revalidate or self._cover_worker.fill:
+				self._cover_worker.sync(revalidate)
+				return True
+		return False
 
 	def _set_default_tagtypes(self):
 		self._run_command("tagtypes reset track title artist album albumartist albumartistsort date")
@@ -1019,6 +1032,7 @@ class Client(GObject.Object):
 					self.emit("volume", -1)
 				elif "updating_db" == key:
 					self.emit("updated-db", self._database_is_empty())
+					self.sync_covers(True)
 				elif "bitrate" == key:
 					self.emit("bitrate", None)
 			return True
@@ -1061,12 +1075,14 @@ class Client(GObject.Object):
 class CoverCache:
 	"""Persistent cache for the raw cover bytes of a remote MPD server, i.e. for exactly what
 	would otherwise have to be fetched from MPD again and again. Albums without a cover are
-	stored with data=NULL so that MPD isn't asked for them a second time. There is no
-	invalidation yet. An instance must only be used by the thread that created it."""
+	stored with data=NULL so that MPD isn't asked for them a second time. The worker
+	checks the cached covers after a database update. An instance must only be used by the thread that created it."""
 	def __init__(self):
 		path=self.path()
 		GLib.mkdir_with_parents(GLib.path_get_dirname(path), 0o755)
 		self._con=sqlite3.connect(path)
+		self._con.execute("PRAGMA journal_mode=WAL")  # the preferences dialog may read while the worker may write
+		self._con.execute("PRAGMA synchronous=NORMAL")
 		self._con.execute("CREATE TABLE IF NOT EXISTS covers (server TEXT NOT NULL, album TEXT NOT NULL, data BLOB,"
 			" kind INTEGER NOT NULL DEFAULT 0,"  # 0: cover or none, 1: cover from an embedded picture, 2: song has the cover of its album
 			" added INTEGER NOT NULL DEFAULT (strftime('%s','now')), PRIMARY KEY (server, album))")
@@ -1079,12 +1095,31 @@ class CoverCache:
 		except sqlite3.Error:
 			return None
 
+	def has(self, server, album):
+		try:
+			return self._con.execute("SELECT 1 FROM covers WHERE server=? AND album=?", (server, album)).fetchone() is not None
+		except sqlite3.Error:
+			return True  # don't try to fill what can't be stored
+
+	def keys(self, server):
+		try:
+			return {row[0] for row in self._con.execute("SELECT album FROM covers WHERE server=?", (server,))}
+		except sqlite3.Error:
+			return set()
+
 	def put(self, server, album, data, kind=0):
 		try:
 			self._con.execute("INSERT OR REPLACE INTO covers (server, album, data, kind) VALUES (?,?,?,?)", (server, album, data or None, kind))
 			self._con.commit()
 		except sqlite3.Error:
 			pass  # the cover is displayed anyway
+
+	def delete(self, server, album):
+		try:
+			self._con.execute("DELETE FROM covers WHERE server=? AND album=?", (server, album))
+			self._con.commit()
+		except sqlite3.Error:
+			pass
 
 	@staticmethod
 	def path():
@@ -1114,6 +1149,7 @@ class CoverCache:
 					con.execute("DELETE FROM covers")
 					con.commit()
 					con.execute("VACUUM")
+					con.execute("PRAGMA wal_checkpoint(TRUNCATE)")  # for WAL
 				finally:
 					con.close()
 			except sqlite3.Error:
@@ -1133,6 +1169,7 @@ class CoverWorker:
 		self._client=None
 		self._permission_error=False
 		self._embedded=False  # the cover loaded last came from an embedded picture
+		self.fill=False  # cache the covers of all albums, not only the ones that have been requested
 		threading.Thread(target=self._run, daemon=True).start()
 
 	def request(self, album, callback, is_valid, priority, on_fail=None, song=None):
@@ -1143,6 +1180,11 @@ class CoverWorker:
 		called if the song has a cover of its own that differs from the cover of the album, which has to be an
 		embedded picture."""
 		self._queue.put((priority, next(self._seq), (album, callback, is_valid, on_fail, song)))
+
+	def sync(self, revalidate):
+		"""Background job with the lowest priority: caches the missing covers of all albums as long as self.fill is set, and
+		with revalidate checks the cached covers for changes (and removes the ones of albums that are gone)."""
+		self._queue.put((3, next(self._seq), revalidate))
 
 	def stop(self):
 		self._stopped.set()
@@ -1185,17 +1227,35 @@ class CoverWorker:
 		self._client=client
 		return True
 
-	def _fetch(self, album):
+	def _fetch(self, album, known=False):
 		"""Returns the raw cover bytes, b"" if MPD definitely has no cover for the album and None
-		if nothing should be cached."""
+		if nothing should be cached. With known (the cached bytes, None for no cover) only the first block is loaded
+		to find out whether the cover has changed, True is returned if it hasn't (False if the album or song is gone)."""
 		client=self._client
 		self._permission_error=False
 		self._embedded=False
 		client._send_command(f"find {album.tag_filter()} window 0:1")
 		song=client._parse_song()
 		if not song:
-			return None
+			return None if known is False else False  # with known: it doesn't exist anymore
 		quoted_file=song.get_quoted_file()
+		if known is not False:
+			for command in ("albumart", "readpicture"):
+				try:
+					probe=client._cover_probe(command, quoted_file)
+				except ConnectionLostError:
+					raise
+				except CommandError:
+					continue
+				if probe is not None:
+					if known is not None and probe[0] == len(known) and known.startswith(probe[1]):
+						return True
+					break
+			else:
+				if known is None and not self._permission_error:
+					return True
+			if self._permission_error:
+				return None
 		try:
 			data=client._cover_fetch_bytes("albumart", quoted_file)
 		except ConnectionLostError:
@@ -1301,13 +1361,87 @@ class CoverWorker:
 		elif on_fail is not None and is_valid():  # nothing could be loaded, e.g. no connection
 			GLib.idle_add(on_fail)
 
+	def _list_albums(self):
+		client=self._client
+		client._set_default_tagtypes()  # a hidden tag can't be listed
+		try:
+			client._send_command("list album group albumartist group albumartistsort group date")
+			albums=[]
+			albumartist=albumartistsort=date=""
+			for key, value in client._parse_pairs():
+				if key == "date":
+					date=value
+				elif key == "albumartist":
+					albumartist=value
+				elif key == "albumartistsort":
+					albumartistsort=value
+				else:
+					albums.append(Album(Artist(albumartist, albumartistsort), value, date))
+			return albums
+		finally:
+			client._clear_tagtypes()
+
+	def _sync_albums(self, cache, revalidate):
+		"""Generator, one album per step so that requests with a higher priority are served in between. Only album covers are
+		cached here. The covers of single songs (embedded pictures that differ from the album cover) are cached when the
+		songs are played, but they are revalidated here. Covers that are already displayed (albums view, player) are not updated
+		afterwards, they are not even by the database update itself: new covers show up once the page has been reloaded."""
+		if cache is None or not (albums:=self._fetch_with_retry(self._list_albums)):
+			return
+		jobs=[(str(album.tag_filter()), album) for album in albums]
+		current={key for key, album in jobs}
+		if revalidate:  # the key of a song row is the filter for that song
+			for key in cache.keys(self._server):
+				if key.startswith("file "):
+					song=Album(Artist("", ""), "", "")
+					song.tag_filter=lambda key=key: key
+					jobs.append((key, song))
+		for key, album in jobs:
+			if self._stopped.is_set() or not (revalidate or self.fill):
+				return
+			if revalidate and (row:=cache.get(self._server, key)) is not None:
+				if row[1] == 2:  # marker "the song has the cover of its album", it is set again when the song is played
+					cache.delete(self._server, key)
+					continue
+				data=self._fetch_with_retry(self._fetch, album, row[0])
+			elif self.fill and key in current and not cache.has(self._server, key):
+				data=self._fetch_with_retry(self._fetch, album)
+			else:
+				continue
+			if data is None:
+				if self._client is None:  # no connection, try again with the next job
+					return
+			elif data is False:  # gone
+				cache.delete(self._server, key)
+			elif data is not True:  # new or changed
+				cache.put(self._server, key, data, int(self._embedded and bool(data)))
+			yield
+		if revalidate:  # albums that are gone
+			for key in cache.keys(self._server)-current:
+				if key.startswith("albumartist "):
+					cache.delete(self._server, key)
+
 	def _run(self):
 		try:
 			cache=CoverCache()
 		except (sqlite3.Error, OSError):
 			cache=None  # work without a cache
-		while (job:=self._queue.get()[2]) is not None and not self._stopped.is_set():
-			self._process(cache, *job)
+		sync=None  # the running background job
+		while not self._stopped.is_set():
+			try:
+				job=self._queue.get(block=sync is None)[2]
+			except queue.Empty:  # nothing else to do: next step of the background job
+				try:
+					next(sync)
+				except StopIteration:
+					sync=None
+				continue
+			if job is None:
+				break
+			if isinstance(job, bool):  # a new background job replaces the running one
+				sync=self._sync_albums(cache, job)
+			else:
+				self._process(cache, *job)
 		if self._client is not None:
 			self._drop(self._client)
 
@@ -1332,8 +1466,9 @@ class PreferencesDialog(Adw.PreferencesDialog):
 	mpris=Gtk.Template.Child()
 	cover_cache=Gtk.Template.Child()
 	cover_cache_row=Gtk.Template.Child()
+	cover_cache_scope=Gtk.Template.Child()
 	cover_cache_clear_button=Gtk.Template.Child()
-	def __init__(self, settings):
+	def __init__(self, settings, client):
 		super().__init__()
 		def refresh_cover_cache():
 			size,covers=CoverCache.stats()
@@ -1341,11 +1476,15 @@ class PreferencesDialog(Adw.PreferencesDialog):
 			self.cover_cache_clear_button.set_visible(covers > 0)
 		def clear_cover_cache(button):
 			CoverCache.clear()
+			refilling=client.sync_covers()  # with the entire collection the cache is filled again
 			refresh_cover_cache()
-			self.add_toast(Adw.Toast(title=_("Cache cleared")))
+			self.add_toast(Adw.Toast(title=_("Cache cleared, refilling") if refilling else _("Cache cleared")))
 		settings.bind("cover-cache", self.cover_cache, "active", Gio.SettingsBindFlags.DEFAULT)
+		settings.bind("cover-cache-scope", self.cover_cache_scope, "selected", Gio.SettingsBindFlags.DEFAULT)
+		settings.bind("cover-cache", self.cover_cache_scope, "sensitive", Gio.SettingsBindFlags.GET)
 		self.cover_cache_clear_button.connect("clicked", clear_cover_cache)
 		refresh_cover_cache()
+		GLib.timeout_add_seconds(2, lambda: refresh_cover_cache() or self.get_mapped())  # keeps the display up to date while the cache is being filled; stops with the dialog
 		settings.bind("show-bit-rate", self.show_bit_rate, "active", Gio.SettingsBindFlags.DEFAULT)
 		settings.bind("stop-on-quit", self.stop_on_quit, "active", Gio.SettingsBindFlags.DEFAULT)
 		settings.bind("mpris", self.mpris, "active", Gio.SettingsBindFlags.DEFAULT)
@@ -1695,6 +1834,10 @@ class AlbumCover(Gtk.Widget):
 			self._picture.set_halign(Gtk.Align.CENTER)
 			self._picture.set_valign(Gtk.Align.FILL)
 		self._picture.set_paintable(paintable)
+		self._picture.remove_css_class("loading")
+
+	def set_loading(self):
+		self._picture.add_css_class("loading")  # frame and placeholder stay invisible until a cover is set
 
 	def set_alternative_text(self, alt_text):
 		self._picture.set_alternative_text(alt_text)
@@ -1925,12 +2068,17 @@ class AlbumRow(Gtk.Box):
 			self._cover.set_alternative_text(_("Album cover of an unknown album"))
 		self._date.set_text(album.date)
 		if album.cover is None:
-			self._cover.set_paintable(FALLBACK_COVER)  # placeholder until the cover has been loaded
+			self._cover.set_loading()
 			def on_cover(cover):
 				album.cover=cover
 				if self.album is album:  # the row might have been rebound in the meantime
 					self._cover.set_paintable(cover)
-			self._client.get_cover_async(album, on_cover, lambda: self.album is album)
+			def show_placeholder():
+				if self.album is album and album.cover is None:
+					self._cover.set_paintable(FALLBACK_COVER)
+			self._client.get_cover_async(album, on_cover, lambda: self.album is album, on_fail=show_placeholder)
+			if album.cover is None:  # not delivered at once (with a cover worker): show the placeholder if it takes too long
+				GLib.timeout_add(280, lambda: show_placeholder() or False)
 		else:
 			self._cover.set_paintable(album.cover)
 
@@ -3226,7 +3374,7 @@ class MainWindow(Adw.ApplicationWindow):
 
 	def _on_preferences(self, action, param):
 		if self.get_visible_dialog() is None:
-			PreferencesDialog(self._settings).present(self)
+			PreferencesDialog(self._settings, self._client).present(self)
 
 	def _on_manual_connect(self, action, param):
 		if self.get_visible_dialog() is None:
@@ -3361,6 +3509,7 @@ class Plattenalbum(Adw.Application):
 		self._client.connect("disconnected", self._on_disconnected)
 		self._client.connect("connected", self._on_connected)
 		self._settings.connect("changed::cover-cache", lambda *args: self._client.update_cover_worker())
+		self._settings.connect("changed::cover-cache-scope", lambda *args: self._client.sync_covers())
 
 	def do_activate(self):
 		if self._window is None:
