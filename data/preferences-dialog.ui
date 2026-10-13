@@ -32,6 +32,48 @@
 		</child>
 		</object>
 	</child>
+	<child>
+		<object class="AdwPreferencesGroup">
+		<property name="title" translatable="yes">Cache</property>
+		<child>
+			<object class="AdwActionRow" id="cover_cache_row">
+			<property name="title" translatable="yes">Cache _Remote Covers</property>
+			<property name="use-underline">true</property>
+			<property name="activatable-widget">cover_cache</property>
+			<child type="suffix">
+				<object class="GtkButton" id="cover_cache_clear_button">
+				<property name="valign">center</property>
+				<property name="icon-name">user-trash-symbolic</property>
+				<property name="tooltip-text" translatable="yes">Delete Cache</property>
+				<style>
+					<class name="flat"/>
+					<class name="circular"/>
+					<class name="destructive-action"/>
+				</style>
+				</object>
+			</child>
+			<child type="suffix">
+				<object class="GtkSwitch" id="cover_cache">
+				<property name="valign">center</property>
+				</object>
+			</child>
+			</object>
+		</child>
+		<child>
+			<object class="AdwComboRow" id="cover_cache_scope">
+			<property name="title" translatable="yes">Scope</property>
+			<property name="model">
+				<object class="GtkStringList">
+				<items>
+					<item translatable="yes">Viewed Covers</item>
+					<item translatable="yes">Entire Collection</item>
+				</items>
+				</object>
+			</property>
+			</object>
+		</child>
+		</object>
+	</child>
 	</object>
 </child>
 </template>
