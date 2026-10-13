@@ -447,6 +447,9 @@ class Artist(GObject.Object):
 	def tag_filter(self):
 		return TagFilter(albumartist=self.name, albumartistsort=self.sortname)
 
+def dbg(*args):
+	print("[cover %.2f]" % (GLib.get_monotonic_time()/1e6 % 1000), *args, file=sys.stderr, flush=True)
+
 class CommandError(Exception): pass
 class ConnectionLostError(CommandError): pass
 class Client(GObject.Object):
@@ -968,6 +971,7 @@ class Client(GObject.Object):
 		"""Remote server and enabled cache: in the background (with the lowest priority) the covers of the whole collection are
 		cached if chosen in the preferences, and with revalidate the cached covers are checked for changes.
 		Returns whether a job has been started."""
+		dbg("sync_covers revalidate=%s worker=%s scope=%s" % (revalidate, self._cover_worker is not None, self._settings.get_uint("cover-cache-scope")))
 		if self._cover_worker is not None:
 			self._cover_worker.fill=self._settings.get_uint("cover-cache-scope") == 1
 			if revalidate or self._cover_worker.fill:
@@ -1179,11 +1183,13 @@ class CoverWorker:
 		the order of the requests. With a song (an album-like object for just that song) callback(cover) is only
 		called if the song has a cover of its own that differs from the cover of the album, which has to be an
 		embedded picture."""
+		dbg("QUEUE prio=%d %s %s" % (priority, "song" if song is not None else "album", (song or album).tag_filter()))
 		self._queue.put((priority, next(self._seq), (album, callback, is_valid, on_fail, song)))
 
 	def sync(self, revalidate):
 		"""Background job with the lowest priority: caches the missing covers of all albums as long as self.fill is set, and
 		with revalidate checks the cached covers for changes (and removes the ones of albums that are gone)."""
+		dbg("QUEUE prio=3 sync revalidate=%s fill=%s" % (revalidate, self.fill))
 		self._queue.put((3, next(self._seq), revalidate))
 
 	def stop(self):
@@ -1344,21 +1350,26 @@ class CoverWorker:
 
 	def _process(self, cache, album, callback, is_valid, on_fail, song):
 		if not is_valid():  # outdated (e.g. scrolled away), don't touch cache or network
+			dbg("SKIP outdated", (song or album).tag_filter())
 			return
 		if song is not None:
+			dbg("SONGCHECK", song.tag_filter())
 			if not self._check_song(cache, album, song, callback, is_valid) and on_fail is not None and is_valid():
 				GLib.idle_add(on_fail)  # e.g. no connection: at least the album cover
 			return
 		key=str(album.tag_filter())
 		if cache is not None and (row:=cache.get(self._server, key)) is not None:
+			dbg("HIT", key, "kind=%d bytes=%s" % (row[1], None if row[0] is None else len(row[0])))
 			album.embedded=row[1] == 1
 			self._deliver(callback, is_valid, row[0])
 		elif (data:=self._fetch_with_retry(self._fetch, album)) is not None:
+			dbg("FETCH", key, "bytes=%d embedded=%s" % (len(data), self._embedded))
 			album.embedded=self._embedded and bool(data)
 			if cache is not None:
 				cache.put(self._server, key, data, int(album.embedded))
 			self._deliver(callback, is_valid, data)
 		elif on_fail is not None and is_valid():  # nothing could be loaded, e.g. no connection
+			dbg("FAIL", key, "client=%s" % (self._client is not None))
 			GLib.idle_add(on_fail)
 
 	def _list_albums(self):
@@ -1386,8 +1397,14 @@ class CoverWorker:
 		cached here. The covers of single songs (embedded pictures that differ from the album cover) are cached when the
 		songs are played, but they are revalidated here. Covers that are already displayed (albums view, player) are not updated
 		afterwards, they are not even by the database update itself: new covers show up once the page has been reloaded."""
-		if cache is None or not (albums:=self._fetch_with_retry(self._list_albums)):
+		dbg("SYNC start revalidate=%s fill=%s cache=%s" % (revalidate, self.fill, cache is not None))
+		if cache is None:
 			return
+		albums=self._fetch_with_retry(self._list_albums)
+		if not albums:
+			dbg("SYNC abort: no album list", albums)
+			return
+		dbg("SYNC %d albums listed" % len(albums))
 		jobs=[(str(album.tag_filter()), album) for album in albums]
 		current={key for key, album in jobs}
 		if revalidate:  # the key of a song row is the filter for that song
@@ -1396,30 +1413,45 @@ class CoverWorker:
 					song=Album(Artist("", ""), "", "")
 					song.tag_filter=lambda key=key: key
 					jobs.append((key, song))
+		n_checked=n_changed=n_filled=n_failed=n_deleted=0
 		for key, album in jobs:
 			if self._stopped.is_set() or not (revalidate or self.fill):
+				dbg("SYNC stopped stopped=%s revalidate=%s fill=%s" % (self._stopped.is_set(), revalidate, self.fill))
 				return
 			if revalidate and (row:=cache.get(self._server, key)) is not None:
 				if row[1] == 2:  # marker "the song has the cover of its album", it is set again when the song is played
 					cache.delete(self._server, key)
+					n_deleted+=1
+					dbg("MARKER removed", key)
 					continue
 				data=self._fetch_with_retry(self._fetch, album, row[0])
+				n_checked+=1
+				dbg("REVALIDATE", "album" if key in current else "song", key, "->", "unchanged" if data is True else "GONE" if data is False else "FAILED" if data is None else "changed, %d bytes" % len(data))
 			elif self.fill and key in current and not cache.has(self._server, key):
 				data=self._fetch_with_retry(self._fetch, album)
+				n_filled+=1
+				dbg("FILL", key, "->", "FAILED" if data is None else "%d bytes" % len(data))
 			else:
 				continue
 			if data is None:
+				n_failed+=1
 				if self._client is None:  # no connection, try again with the next job
+					dbg("SYNC abort: no connection")
 					return
 			elif data is False:  # gone
 				cache.delete(self._server, key)
+				n_deleted+=1
 			elif data is not True:  # new or changed
+				n_changed+=1
 				cache.put(self._server, key, data, int(self._embedded and bool(data)))
 			yield
 		if revalidate:  # albums that are gone
 			for key in cache.keys(self._server)-current:
 				if key.startswith("albumartist "):
 					cache.delete(self._server, key)
+					n_deleted+=1
+					dbg("REMOVED", key)
+		dbg("SYNC done checked=%d filled=%d stored=%d failed=%d deleted=%d" % (n_checked, n_filled, n_changed, n_failed, n_deleted))
 
 	def _run(self):
 		try:
