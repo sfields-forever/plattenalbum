@@ -42,6 +42,26 @@ msgstr ""
 msgid "Not enough permissions"
 msgstr ""
 
+#: src/plattenalbum.py:1475
+#, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr ""
+
+#: src/plattenalbum.py:1475
+#, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/plattenalbum.py:1481
+msgid "Cache cleared, refilling"
+msgstr ""
+
+#: src/plattenalbum.py:1481
+msgid "Cache cleared"
+msgstr ""
+
 #: src/plattenalbum.py:998
 msgid "Manual Connection"
 msgstr ""
@@ -573,4 +593,28 @@ msgstr ""
 
 #: data/preferences-dialog.ui:29
 msgid "Disable if “MPRIS” is supported by another client"
+msgstr ""
+
+#: data/preferences-dialog.ui:37
+msgid "Cache"
+msgstr ""
+
+#: data/preferences-dialog.ui:40
+msgid "Cache _Remote Covers"
+msgstr ""
+
+#: data/preferences-dialog.ui:47
+msgid "Delete Cache"
+msgstr ""
+
+#: data/preferences-dialog.ui:64
+msgid "Scope"
+msgstr ""
+
+#: data/preferences-dialog.ui:68
+msgid "Viewed Covers"
+msgstr ""
+
+#: data/preferences-dialog.ui:69
+msgid "Entire Collection"
 msgstr ""

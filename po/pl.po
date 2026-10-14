@@ -27,6 +27,29 @@ msgstr[0] "{days} dzień"
 msgstr[1] "{days} dni"
 msgstr[2] "{days} dni"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Rozmiar: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} okładka"
+msgstr[1] "{count} okładki"
+msgstr[2] "{count} okładek"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "Wyczyszczono pamięć podręczną, trwa ponowne wypełnianie"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "Wyczyszczono pamięć podręczną"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "Widok"
@@ -54,6 +77,36 @@ msgstr "Obsługuj „_MPRIS”"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "Wyłącz jeśli „MPRIS” jest obsługiwany przez innego klienta"
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "Pamięć podręczna"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "Zapisuj zdalne _okładki w pamięci podręcznej"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "Usuń pamięć podręczną"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "Zakres"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "Wyświetlone okładki"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "Cała biblioteka"
 
 #: src/plattenalbum.py:1005
 #, fuzzy

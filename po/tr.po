@@ -25,6 +25,27 @@ msgid "{days} day"
 msgid_plural "{days} days"
 msgstr[0] "{days} gün"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Boyut: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} kapak"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "Önbellek temizlendi, yeniden dolduruluyor"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "Önbellek temizlendi"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "Gürünüm"
@@ -52,6 +73,36 @@ msgstr "“_MPRIS” destekle"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "“MPRIS” başka istemci tarafından destekleniyorsa devre dışı bırakın"
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "Önbellek"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "Uzak _Kapakları Önbelleğe Al"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "Önbelleği Sil"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "Kapsam"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "Görüntülenen Kapaklar"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "Tüm Koleksiyon"
 
 #: src/plattenalbum.py:1005
 #, fuzzy

@@ -27,6 +27,29 @@ msgstr[0] "{days} день"
 msgstr[1] "{days} дня"
 msgstr[2] "{days} дней"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Размер: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} обложка"
+msgstr[1] "{count} обложки"
+msgstr[2] "{count} обложек"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "Кэш очищен, заполняется заново"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "Кэш очищен"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "Вид"
@@ -54,6 +77,36 @@ msgstr "Поддержка MPRIS"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "Отключите, если MPRIS поддерживается другим клиентом"
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "Кэш"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "Кэшировать удалённые обложки"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "Удалить кэш"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "Область"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "Просмотренные обложки"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "Вся фонотека"
 
 #: src/plattenalbum.py:1005
 #, fuzzy

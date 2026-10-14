@@ -26,6 +26,28 @@ msgid_plural "{days} days"
 msgstr[0] "{days} dia"
 msgstr[1] "{days} dias"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Tamanho: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} capa"
+msgstr[1] "{count} capas"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "Cache excluído, preenchendo novamente"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "Cache excluído"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "Visualizar"
@@ -53,6 +75,36 @@ msgstr "Apoio “_MPRIS”"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "Desabilitar se “MPRIS” for suportado por outro cliente"
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "Cache"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "Armazenar _capas remotas em cache"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "Excluir cache"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "Escopo"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "Capas visualizadas"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "Coleção inteira"
 
 #: src/plattenalbum.py:1005
 msgid "Manual Connection"

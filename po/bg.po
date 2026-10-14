@@ -26,6 +26,28 @@ msgid_plural "{days} days"
 msgstr[0] "{days} ден"
 msgstr[1] "{days} дни"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Размер: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} обложка"
+msgstr[1] "{count} обложки"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "Кешът е изчистен, зарежда се отново"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "Кешът е изчистен"
+
 #: src/plattenalbum.py:930
 msgid "View"
 msgstr "Поглед"
@@ -61,6 +83,36 @@ msgstr "Поддръжка на “MPRIS”"
 #: src/plattenalbum.py:946
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr ""
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "Кеш"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "Кеширане на отдалечени обложки"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "Изтриване на кеша"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "Обхват"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "Разгледани обложки"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "Цялата колекция"
 
 #: src/plattenalbum.py:965
 #, fuzzy
