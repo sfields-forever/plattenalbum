@@ -24,6 +24,27 @@ msgid "{days} day"
 msgid_plural "{days} days"
 msgstr[0] "{days} күн"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Өлшемі: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} мұқаба"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "Кэш тазартылды, қайта толтырылуда"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "Кэш тазартылды"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "Көрініс"
@@ -51,6 +72,36 @@ msgstr "“MPRIS” _қолдауы"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "Басқа клиент “MPRIS” қолдаса өшіру"
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "Кэш"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "Қашықтағы мұқабаларды _кэштеу"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "Кэшті жою"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "Қамту аясы"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "Қаралған мұқабалар"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "Бүкіл коллекция"
 
 #: src/plattenalbum.py:1005
 msgid "Manual Connection"

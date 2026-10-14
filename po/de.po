@@ -42,6 +42,26 @@ msgstr "Falsches Passwort"
 msgid "Not enough permissions"
 msgstr "Nicht genügend Berechtigungen"
 
+#: src/plattenalbum.py:1475
+#, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Größe: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} Cover"
+msgstr[1] "{count} Cover"
+
+#: src/plattenalbum.py:1481
+msgid "Cache cleared, refilling"
+msgstr "Cache geleert, wird neu befüllt"
+
+#: src/plattenalbum.py:1481
+msgid "Cache cleared"
+msgstr "Cache geleert"
+
 #: src/plattenalbum.py:998
 msgid "Manual Connection"
 msgstr "Manuelle Verbindung"
@@ -582,6 +602,31 @@ msgstr "»_MPRIS« unterstützen"
 #: data/preferences-dialog.ui:29
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "Deaktivieren wenn »MPRIS« von einem anderen Client unterstützt wird"
+
+#: data/preferences-dialog.ui:37
+msgid "Cache"
+msgstr "Cache"
+
+# Alternative: "_Cover nicht lokaler Server cachen" / "Cache nicht lokale Cover"
+#: data/preferences-dialog.ui:40
+msgid "Cache _Remote Covers"
+msgstr "_Cover anderer Geräte cachen"
+
+#: data/preferences-dialog.ui:47
+msgid "Delete Cache"
+msgstr "Cache löschen"
+
+#: data/preferences-dialog.ui:64
+msgid "Scope"
+msgstr "Umfang"
+
+#: data/preferences-dialog.ui:68
+msgid "Viewed Covers"
+msgstr "Angezeigte Cover"
+
+#: data/preferences-dialog.ui:69
+msgid "Entire Collection"
+msgstr "Gesamte Sammlung"
 
 #~ msgid "Next Song is Playing"
 #~ msgstr "Nächstes Lied läuft"
