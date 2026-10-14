@@ -25,6 +25,27 @@ msgid "{days} day"
 msgid_plural "{days} days"
 msgstr[0] "{days}日"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "サイズ: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} 個のカバー"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "キャッシュを消去しました。再構築しています"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "キャッシュを消去しました"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "表示"
@@ -52,6 +73,36 @@ msgstr "“MPRIS” をサポートする (_M)"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr ""
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "キャッシュ"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "リモートのカバーをキャッシュする (_R)"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "キャッシュを削除"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "範囲"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "表示したカバー"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "コレクション全体"
 
 #: src/plattenalbum.py:1005
 #, fuzzy

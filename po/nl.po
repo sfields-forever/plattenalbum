@@ -25,6 +25,28 @@ msgid_plural "{days} days"
 msgstr[0] "{days} dag"
 msgstr[1] "{days} dagen"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Grootte: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} hoes"
+msgstr[1] "{count} hoezen"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "Cache gewist, wordt opnieuw gevuld"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "Cache gewist"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "Weergave"
@@ -52,6 +74,36 @@ msgstr "Ondersteuning voor “_MPRIS”"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "Schakel “MPRIS” uit als een andere client dit reeds ondersteunt"
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "Cache"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "Externe hoezen _cachen"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "Cache wissen"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "Bereik"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "Bekeken hoezen"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "Hele verzameling"
 
 #: src/plattenalbum.py:1005
 #, fuzzy

@@ -26,6 +26,28 @@ msgid_plural "{days} days"
 msgstr[0] "{days} روز"
 msgstr[1] "{days} روز"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "اندازه: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} جلد"
+msgstr[1] "{count} جلد"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "حافظهٔ نهان پاک شد، در حال پرشدن مجدد"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "حافظهٔ نهان پاک شد"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "نما"
@@ -53,6 +75,36 @@ msgstr "پشتیبانی _MPRIS"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "از کار انداختن در صورت پشتیبانی MPRIS به دست کارخواهی دیگر"
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "حافظهٔ نهان"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "_ذخیره جلدهای راه‌دور در حافظهٔ نهان"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "حذف حافظهٔ نهان"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "دامنه"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "جلدهای دیده‌شده"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "کل مجموعه"
 
 #: src/plattenalbum.py:1005
 msgid "Manual Connection"

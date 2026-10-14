@@ -27,6 +27,29 @@ msgstr[0] "{days} dan"
 msgstr[1] "{days} dana"
 msgstr[2] "{days} dana"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Veličina: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} omot"
+msgstr[1] "{count} omota"
+msgstr[2] "{count} omota"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "Predmemorija izbrisana, ponovno se popunjava"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "Predmemorija izbrisana"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "Prikaz"
@@ -54,6 +77,36 @@ msgstr "Podrži „_MPRIS“"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "Deaktiviraj ako jedan drugi klijent podržava „MPRIS“"
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "Predmemorija"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "Predmemoriraj udaljene _omote"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "Izbriši predmemoriju"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "Opseg"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "Pregledani omoti"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "Cijela zbirka"
 
 #: src/plattenalbum.py:1005
 msgid "Manual Connection"

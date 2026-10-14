@@ -27,6 +27,29 @@ msgstr[0] "{days} zi"
 msgstr[1] "{days} zile"
 msgstr[2] "{days} zile"
 
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Dimensiune: {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, fuzzy, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} copertă"
+msgstr[1] "{count} coperte"
+msgstr[2] "{count} de coperte"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared, refilling"
+msgstr "Cache golit, se reumple"
+
+#: src/plattenalbum.py:1481
+#, fuzzy
+msgid "Cache cleared"
+msgstr "Cache golit"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "Vizualizare"
@@ -54,6 +77,36 @@ msgstr "Suport „_MPRIS”"
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "Dezactivează dacă „MPRIS” este suportat de un alt client"
+
+#: data/preferences-dialog.ui:37
+#, fuzzy
+msgid "Cache"
+msgstr "Cache"
+
+#: data/preferences-dialog.ui:40
+#, fuzzy
+msgid "Cache _Remote Covers"
+msgstr "Memorează în _cache copertele la distanță"
+
+#: data/preferences-dialog.ui:47
+#, fuzzy
+msgid "Delete Cache"
+msgstr "Șterge cache-ul"
+
+#: data/preferences-dialog.ui:64
+#, fuzzy
+msgid "Scope"
+msgstr "Domeniu"
+
+#: data/preferences-dialog.ui:68
+#, fuzzy
+msgid "Viewed Covers"
+msgstr "Coperte vizualizate"
+
+#: data/preferences-dialog.ui:69
+#, fuzzy
+msgid "Entire Collection"
+msgstr "Întreaga colecție"
 
 #: src/plattenalbum.py:1005
 msgid "Manual Connection"

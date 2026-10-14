@@ -25,6 +25,26 @@ msgid_plural "{days} days"
 msgstr[0] "{days} jour"
 msgstr[1] "{days} jours"
 
+#: src/plattenalbum.py:1475
+#, python-brace-format
+msgid "Size: {size} - {covers}"
+msgstr "Taille : {size} - {covers}"
+
+#: src/plattenalbum.py:1475
+#, python-brace-format
+msgid "{count} Cover"
+msgid_plural "{count} Covers"
+msgstr[0] "{count} pochette"
+msgstr[1] "{count} pochettes"
+
+#: src/plattenalbum.py:1481
+msgid "Cache cleared, refilling"
+msgstr "Cache vidé, remplissage en cours"
+
+#: src/plattenalbum.py:1481
+msgid "Cache cleared"
+msgstr "Cache vidé"
+
 #: src/plattenalbum.py:973
 msgid "View"
 msgstr "Vue"
@@ -52,6 +72,30 @@ msgstr "Support du \"_MPRIS\""
 #: src/plattenalbum.py:988
 msgid "Disable if “MPRIS” is supported by another client"
 msgstr "Désactiver si \"MPRIS\" est supporté par un autre client"
+
+#: data/preferences-dialog.ui:37
+msgid "Cache"
+msgstr "Cache"
+
+#: data/preferences-dialog.ui:40
+msgid "Cache _Remote Covers"
+msgstr "Cache des _pochettes distantes"
+
+#: data/preferences-dialog.ui:47
+msgid "Delete Cache"
+msgstr "Vider le cache"
+
+#: data/preferences-dialog.ui:64
+msgid "Scope"
+msgstr "Portée"
+
+#: data/preferences-dialog.ui:68
+msgid "Viewed Covers"
+msgstr "Pochettes consultées"
+
+#: data/preferences-dialog.ui:69
+msgid "Entire Collection"
+msgstr "Collection entière"
 
 #: src/plattenalbum.py:1005
 #, fuzzy
